@@ -30,15 +30,16 @@ services:
       API_PORT: 3000
       DATABASE_URL: postgresql://${POSTGRES_USER:-drhome}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-drhome}
       SESSION_SECRET: ${SESSION_SECRET}
-      APP_ORIGIN: ${APP_ORIGIN:-https://app.drhome.ae}
+      FRONTEND_URL: ${FRONTEND_URL:-http://app.drhome.ae}
+      APP_ORIGIN: ${APP_ORIGIN:-http://app.drhome.ae}
       COOKIE_NAME: ${COOKIE_NAME:-drhome_sid}
-      COOKIE_SECURE: ${COOKIE_SECURE:-true}
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
       TRUST_PROXY: ${TRUST_PROXY:-1}
       SEED_DEMO: ${SEED_DEMO:-true}
       DEMO_EMAIL: ${DEMO_EMAIL:-demo@drhome.ae}
       DEMO_PASSWORD: ${DEMO_PASSWORD:-ChangeMe123!}
     ports:
-      - "${API_HOST_PORT:-3051}:3000"
+      - "${APP_HOST_PORT:-3051}:3000"
     networks: [drhome-internal]
 
 volumes:
