@@ -1,6 +1,6 @@
 {
   "name": "drhome-backend",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "private": true,
   "type": "module",
   "scripts": {
@@ -21,9 +21,10 @@
     "zod": "^3.24.1"
   },
   "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
     "@types/connect-pg-simple": "^7.0.3",
     "@types/cors": "^2.8.17",
-    "@types/express": "^5.0.0",
+    "@types/express": "^4.17.21",
     "@types/express-session": "^1.18.1",
     "@types/node": "^22.10.5",
     "@types/pg": "^8.11.10",
