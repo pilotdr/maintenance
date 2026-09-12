@@ -26,6 +26,7 @@ services:
         condition: service_healthy
     environment:
       NODE_ENV: ${NODE_ENV:-production}
+      API_PORT: 3000
       DATABASE_URL: postgresql://${POSTGRES_USER:-drhome}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-drhome}
       SESSION_SECRET: ${SESSION_SECRET}
       APP_ORIGIN: ${APP_ORIGIN:-https://app.drhome.ae}
@@ -36,7 +37,7 @@ services:
       DEMO_EMAIL: ${DEMO_EMAIL:-demo@drhome.ae}
       DEMO_PASSWORD: ${DEMO_PASSWORD:-ChangeMe123!}
     ports:
-      - "127.0.0.1:${API_PORT:-3000}:3000"
+      - "${API_HOST_PORT:-3051}:3000"
     networks: [drhome-internal]
 
 volumes:
