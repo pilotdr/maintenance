@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#080809">
+<title>Create account · DR HOME</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#080809;color:#fff;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif}.app{max-width:430px;min-height:100vh;margin:auto;padding:42px 22px;background:radial-gradient(circle at 50% 5%,#202226 0,#101113 30%,#080809 68%)}.brand{text-align:center;font-weight:850;letter-spacing:2px;font-size:22px;margin:10px 0 30px}.copy{text-align:center;margin:0 0 24px}.kicker{color:#8e9197;font-size:11px;letter-spacing:1.8px;text-transform:uppercase}h1{font-size:28px;margin:7px 0 8px}.copy p{margin:0;color:#9ca0a6;font-size:13px;line-height:1.5}.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}.field{margin:12px 0}label{display:block;color:#a7aab0;font-size:11px;letter-spacing:.7px;text-transform:uppercase;margin:0 0 8px 3px}input{width:100%;height:52px;border-radius:15px;border:1px solid #303237;background:#17181b;color:#fff;padding:0 15px;font-size:15px;outline:none}input:focus{border-color:#666a70}.btn{margin-top:22px;background:#fff;color:#111;border-radius:16px;padding:16px;text-align:center;font-weight:780;cursor:pointer}.btn.busy{opacity:.65;pointer-events:none}.error{display:none;margin-top:12px;padding:11px 12px;border-radius:12px;background:rgba(194,67,67,.11);border:1px solid rgba(225,100,100,.2);color:#f1aaaa;font-size:12px}.back{text-align:center;margin-top:18px;color:#8e9197;font-size:13px}.back a{color:#fff;text-decoration:none;font-weight:700}.note{color:#6f7277;font-size:11px;line-height:1.5;text-align:center;margin-top:18px}
+</style>
+</head>
+<body>
+<main class="app">
+  <div class="brand">DR HOME™</div>
+  <div class="copy"><div class="kicker">Customer Portal</div><h1>Create your account.</h1><p>Your request will be reviewed by DR HOME<br>before access is activated.</p></div>
+  <div class="row"><div class="field"><label>First name</label><input id="firstName" autocomplete="given-name"></div><div class="field"><label>Last name</label><input id="lastName" autocomplete="family-name"></div></div>
+  <div class="field"><label>Email</label><input id="email" type="email" autocomplete="email"></div>
+  <div class="field"><label>Mobile</label><input id="phone" type="tel" autocomplete="tel"></div>
+  <div class="field"><label>Password</label><input id="password" type="password" autocomplete="new-password" placeholder="Minimum 8 characters"></div>
+  <div class="field"><label>Confirm password</label><input id="password2" type="password" autocomplete="new-password"></div>
+  <div class="error" id="error"></div>
+  <div class="btn" id="registerBtn">Submit registration</div>
+  <div class="back">Already registered? <a href="/login.html">Sign in</a></div>
+  <div class="note">After submission, your account remains pending until DR HOME approves it.</div>
+</main>
+<script src="/auth.js"></script>
+<script>
+const $=id=>document.getElementById(id); const err=$('error');
+$('registerBtn').onclick=async()=>{
+  err.style.display='none';
+  const payload={firstName:$('firstName').value.trim(),lastName:$('lastName').value.trim(),email:$('email').value.trim(),phone:$('phone').value.trim(),password:$('password').value};
+  if(!payload.firstName||!payload.lastName||!payload.email||!payload.phone||payload.password.length<8){err.textContent='Please complete all fields. Password must be at least 8 characters.';err.style.display='block';return;}
+  if(payload.password!==$('password2').value){err.textContent='Passwords do not match.';err.style.display='block';return;}
+  const btn=$('registerBtn'); btn.classList.add('busy'); btn.textContent='Submitting…';
+  try{
+    const result=await window.drhomeRegister(payload);
+    if(result.ok){sessionStorage.setItem('drhome_pending_email',payload.email);location.href='/registration-pending.html';return;}
+    if(result.status===409&&result.data?.error==='registration_exists') err.textContent='A registration request already exists for this email.';
+    else if(result.status===409&&result.data?.error==='account_exists') err.textContent='An active account already exists for this email. Please sign in.';
+    else err.textContent='Registration could not be submitted. Please try again.';
+    err.style.display='block';
+  }catch(e){err.textContent='Could not reach the DR HOME server.';err.style.display='block';}
+  finally{btn.classList.remove('busy');btn.textContent='Submit registration';}
+};
+</script>
+</body></html>
