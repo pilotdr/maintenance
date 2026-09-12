@@ -12,6 +12,20 @@ CREATE TABLE IF NOT EXISTS customers (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+CREATE TABLE IF NOT EXISTS registration_requests (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  email TEXT NOT NULL UNIQUE,
+  password_hash TEXT NOT NULL,
+  first_name TEXT NOT NULL,
+  last_name TEXT NOT NULL,
+  phone TEXT,
+  status TEXT NOT NULL DEFAULT 'pending'
+    CHECK (status IN ('pending','approved','rejected')),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  reviewed_at TIMESTAMPTZ,
+  reviewed_by UUID
+);
+
 CREATE TABLE IF NOT EXISTS properties (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   customer_id UUID NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
@@ -51,6 +65,7 @@ CREATE TABLE IF NOT EXISTS appointments (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+CREATE INDEX IF NOT EXISTS idx_registration_requests_status ON registration_requests(status, created_at);
 CREATE INDEX IF NOT EXISTS idx_properties_customer ON properties(customer_id);
 CREATE INDEX IF NOT EXISTS idx_maintenance_property ON maintenance_plans(property_id);
 CREATE INDEX IF NOT EXISTS idx_appointments_customer ON appointments(customer_id);
