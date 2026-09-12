@@ -13,14 +13,21 @@ import { requireAuth } from "./auth.js";
 dotenv.config();
 const app = express();
 const port = Number(process.env.API_PORT || 3000);
-const appOrigin = process.env.APP_ORIGIN || "http://localhost:8080";
+const frontendUrl = process.env.FRONTEND_URL || process.env.APP_ORIGIN || "http://localhost:3000";
+const appOrigin = process.env.APP_ORIGIN || frontendUrl;
 const isProd = process.env.NODE_ENV === "production";
 const PgStore = connectPgSimple(session);
 
 if (process.env.TRUST_PROXY === "1") app.set("trust proxy", 1);
 app.use(helmet());
 app.use(express.json({ limit: "1mb" }));
-app.use(cors({ origin: appOrigin, credentials: true }));
+app.use(cors({
+  origin(origin, callback) {
+    if (!origin || origin === frontendUrl || origin === appOrigin) return callback(null, true);
+    return callback(null, false);
+  },
+  credentials: true
+}));
 app.use(rateLimit({ windowMs: 15*60*1000, limit: 300, standardHeaders: "draft-7", legacyHeaders: false }));
 
 app.use(session({
@@ -40,7 +47,7 @@ app.use(session({
 
 app.get("/health", async (_req, res) => {
   await query("SELECT 1");
-  res.json({ ok: true, service: "drhome-api" });
+  res.json({ ok: true, service: "drhome-api", frontendUrl });
 });
 
 const registrationSchema = z.object({
@@ -172,6 +179,10 @@ app.post("/api/appointments", requireAuth, async (req, res) => {
   res.status(201).json({ appointment: result.rows[0] });
 });
 
+// Customer frontend is served by the same container/application.
+// Browser code uses same-origin /api/* routes; database credentials never leave the server.
+app.use(express.static("public", { index: "index.html" }));
+
 app.use((_req,res)=>res.status(404).json({error:"not_found"}));
 app.use((err:any,_req:any,res:any,_next:any)=>{ console.error(err); res.status(500).json({error:"internal_server_error"}); });
 
@@ -196,10 +207,13 @@ async function ensureSchema() {
 
 async function start() {
   await ensureSchema();
-  app.listen(port, "0.0.0.0", () => console.log(`DR HOME API listening on port ${port}`));
+  app.listen(port, "0.0.0.0", () => {
+    console.log(`DR HOME application listening on port ${port}`);
+    console.log(`Frontend URL: ${frontendUrl}`);
+  });
 }
 
 start().catch(err => {
-  console.error("Failed to start DR HOME API", err);
+  console.error("Failed to start DR HOME application", err);
   process.exit(1);
 });
