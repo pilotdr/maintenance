@@ -43,6 +43,61 @@ app.get("/health", async (_req, res) => {
   res.json({ ok: true, service: "drhome-api" });
 });
 
+const registrationSchema = z.object({
+  firstName: z.string().trim().min(1).max(100),
+  lastName: z.string().trim().min(1).max(100),
+  email: z.string().email().transform(v => v.trim().toLowerCase()),
+  phone: z.string().trim().min(5).max(40).optional().nullable(),
+  password: z.string().min(8).max(200)
+});
+
+app.post("/api/register", async (req, res) => {
+  const parsed = registrationSchema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: "invalid_request" });
+
+  const existingCustomer = await query(`SELECT 1 FROM customers WHERE email=$1 LIMIT 1`, [parsed.data.email]);
+  if (existingCustomer.rowCount) return res.status(409).json({ error: "account_exists" });
+
+  const existingRequest = await query<any>(
+    `SELECT status FROM registration_requests WHERE email=$1 LIMIT 1`,
+    [parsed.data.email]
+  );
+  if (existingRequest.rowCount) {
+    return res.status(409).json({
+      error: "registration_exists",
+      status: existingRequest.rows[0].status
+    });
+  }
+
+  const passwordHash = await bcrypt.hash(parsed.data.password, 12);
+  const result = await query<any>(
+    `INSERT INTO registration_requests (email,password_hash,first_name,last_name,phone,status)
+     VALUES ($1,$2,$3,$4,$5,'pending')
+     RETURNING id,email,first_name,last_name,phone,status,created_at`,
+    [
+      parsed.data.email,
+      passwordHash,
+      parsed.data.firstName,
+      parsed.data.lastName,
+      parsed.data.phone || null
+    ]
+  );
+
+  const registration = result.rows[0];
+  res.status(201).json({
+    registration: {
+      id: registration.id,
+      email: registration.email,
+      firstName: registration.first_name,
+      lastName: registration.last_name,
+      phone: registration.phone,
+      status: registration.status,
+      createdAt: registration.created_at
+    },
+    message: "Registration received and awaiting approval."
+  });
+});
+
 const loginSchema = z.object({
   email: z.string().email().transform(v => v.trim().toLowerCase()),
   password: z.string().min(4).max(200)
@@ -119,4 +174,32 @@ app.post("/api/appointments", requireAuth, async (req, res) => {
 
 app.use((_req,res)=>res.status(404).json({error:"not_found"}));
 app.use((err:any,_req:any,res:any,_next:any)=>{ console.error(err); res.status(500).json({error:"internal_server_error"}); });
-app.listen(port, "0.0.0.0", () => console.log(`DR HOME API listening on port ${port}`));
+
+async function ensureSchema() {
+  await query(`
+    CREATE TABLE IF NOT EXISTS registration_requests (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      email TEXT NOT NULL UNIQUE,
+      password_hash TEXT NOT NULL,
+      first_name TEXT NOT NULL,
+      last_name TEXT NOT NULL,
+      phone TEXT,
+      status TEXT NOT NULL DEFAULT 'pending'
+        CHECK (status IN ('pending','approved','rejected')),
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      reviewed_at TIMESTAMPTZ,
+      reviewed_by UUID
+    )
+  `);
+  await query(`CREATE INDEX IF NOT EXISTS idx_registration_requests_status ON registration_requests(status, created_at)`);
+}
+
+async function start() {
+  await ensureSchema();
+  app.listen(port, "0.0.0.0", () => console.log(`DR HOME API listening on port ${port}`));
+}
+
+start().catch(err => {
+  console.error("Failed to start DR HOME API", err);
+  process.exit(1);
+});
