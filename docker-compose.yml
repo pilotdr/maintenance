@@ -4,14 +4,14 @@ services:
     container_name: drhome-db
     restart: unless-stopped
     environment:
-      POSTGRES_DB: ${POSTGRES_DB}
-      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_DB: ${POSTGRES_DB:-drhome}
+      POSTGRES_USER: ${POSTGRES_USER:-drhome}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
       - drhome_pgdata:/var/lib/postgresql/data
       - ./sql/001_schema.sql:/docker-entrypoint-initdb.d/001_schema.sql:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-drhome} -d ${POSTGRES_DB:-drhome}"]
       interval: 5s
       timeout: 5s
       retries: 20
@@ -24,9 +24,17 @@ services:
     depends_on:
       db:
         condition: service_healthy
-    env_file: [.env]
     environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      NODE_ENV: ${NODE_ENV:-production}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-drhome}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-drhome}
+      SESSION_SECRET: ${SESSION_SECRET}
+      APP_ORIGIN: ${APP_ORIGIN:-https://app.drhome.ae}
+      COOKIE_NAME: ${COOKIE_NAME:-drhome_sid}
+      COOKIE_SECURE: ${COOKIE_SECURE:-true}
+      TRUST_PROXY: ${TRUST_PROXY:-1}
+      SEED_DEMO: ${SEED_DEMO:-true}
+      DEMO_EMAIL: ${DEMO_EMAIL:-demo@drhome.ae}
+      DEMO_PASSWORD: ${DEMO_PASSWORD:-ChangeMe123!}
     ports:
       - "127.0.0.1:${API_PORT:-3000}:3000"
     networks: [drhome-internal]
