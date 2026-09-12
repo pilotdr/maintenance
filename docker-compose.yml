@@ -3,7 +3,6 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.db
-    image: drhome-postgres:16
     container_name: drhome-db
     restart: unless-stopped
     environment:
